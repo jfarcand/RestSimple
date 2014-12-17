@@ -27,15 +27,15 @@ Building a RestSimple Application.
 ==================================
 
 A RestSimple application consist of ServiceDefinition, ServiceHandler and Action. The main component of a RestSimple application is called a ServiceDefinition. A ServiceDefinition contains all information about path, serialization and deserialization of objects, entity to invoke (action), etc. To demonstrate how it works, let's build a really simple pet store application.
-
+```java
     Action action = new PetstoreAction();
     DefaultServiceDefinition serviceDefinition = new DefaultServiceDefinition();
     serviceDefinition
        .withHandler(new GetServiceHandler("getPet", action).consumeWith(JSON, Pet.class).producing(JSON))
        .withHandler(new PostServiceHandler("addPet", action).consumeWith(JSON, Pet.class).producing(JSON));
-
+```
 First, you need to define an action. An action is where the business logic reside. The Action interface is simply defined as:
-
+```java
     public interface Action<T, U> {
 
        /**
@@ -44,9 +44,9 @@ First, you need to define an action. An action is where the business logic resid
         * @return T a response to be serialized
         */
        public T action(ActionContext<U> actionContext) throws ActionException;
-
+```
 Second, let's define a very simple Action. Let's just persist our Pet in memory, and make sure a REST request can retrieve those pets. Something as simple as:
-
+```java
     public class PetstoreAction extends TypedAction<Pet, Pet> {
 
         public final static String APPLICATION = "application";
@@ -92,9 +92,9 @@ Second, let's define a very simple Action. Let's just persist our Pet in memory,
             return pets.remove(pathValue);
         }
     }
-
+```
 Note the type of our PetAction: <Pet,Pet>: that simply means the Action will consume Pet instance, and also produce Pet. The ActionContext.get() operation will return a Pet object. This object is automatically de-serialized by the framework by using the information contained in the ServiceDefinition (more on that later). The Pet object can simply be defined as:
-
+```java
     public class Pet {
 
       private String name;
@@ -121,24 +121,24 @@ Note the type of our PetAction: <Pet,Pet>: that simply means the Action will con
                 '}';
       }
     }
-
+```
 The serialization and deserialization of the Pet class will be handled be the RestSimple framework itself. Next step is to map our Action to some URL. With RestSimple, this is done using ServiceHandler. A ServiceHandler is a simple placeholder for defining how an Action are mapped from a URL. Simply said, you define a ServiceHandler as:
-
+```java
     new GetServiceHandler("/getPet/{pet}", action).consumeWith(JSON, Pet.class).producing(JSON);
-
+```
 The line above map an Action to an HTTP Get operation, consuming JSON and producing JSON. If you are familiar with JAX-RS, the functionality would be defined as
-
+```java
     @Get
     @Produces
     @Consumes
     public Response invokeAction(@PathParam("getPet") Pet pet) {...}
-
+```
 An HTTP POST operation can simply be defined as:
-
+```java
     new PostServiceHandler("addPet", action).addFormParam("petColor").addFormParam("petAge");
-
+```
 Now before deploying our ServiceDefinition, let's define it completely:
-
+```java
     Action action = new PetstoreAction();
     serviceDefinition = new DefaultServiceDefinition();
     serviceDefinition
@@ -146,11 +146,11 @@ Now before deploying our ServiceDefinition, let's define it completely:
            .withHandler(new GetServiceHandler("/getPet/{pet}", action).consumeWith(JSON, Pet.class).producing(JSON))
            .withHandler(new DeleteServiceHandler("/deletePet/{pet}", action).consumeWith(JSON, Pet.class).producing(JSON))
            .withHandler(new PostServiceHandler("/addPet/{pet}", action).consumeWith(JSON, Pet.class).producing(JSON));
-
+```
 That's it.
 
 You can also generate ServiceDefinition on the fly from any POJO object. Let's say we have a POJO defined as:
-
+```java
     public class AddressBook {
         private final Map<String, Person> peoplea = new LinkedHashMap<String, Person>();;
 
@@ -183,21 +183,21 @@ You can also generate ServiceDefinition on the fly from any POJO object. Let's s
             return peoplea.remove(id);
         }
     }
-
+```
 You can generate a ServiceDefinition by doing:
-
+```java
     MethodServiceDefinitionBuilder serviceDefinitionBuilder = new MethodServiceDefinitionBuilder();
     ServiceDefinition serviceDefinition = serviceDefinitionBuilder.type(AddressBook.class).build();
-
+```
 The ServiceDefinition will be generated using the following template:
-
+```java
     GET         readXXX
     POST        createXXX
     PUT         updateXXXX
     DELETE      delete
-
+```
 You can customize the method's name to HTTP method operation
-
+```java
     import static org.sonatype.restsimple.creator.ServiceDefinitionCreatorConfig.METHOD;
     import static org.sonatype.restsimple.creator.ServiceDefinitionCreatorConfig.config;
     ....
@@ -207,14 +207,14 @@ You can customize the method's name to HTTP method operation
          serviceDefinitionBuilder.type(AddressFooBook.class).config(config().map("foo", METHOD.POST)
                                                                             .map("bar", METHOD.GET)
                                                                             .map("pong", METHOD.DELETE)).build();
-
+```
 Hence a method starting with foo will be mapped to a POST operation etc.
 
 Extending RestSimple via native REST support
 ============================================
 Currently RestSimple supports Sitebricks and JAX-RS. It is possible to extend a ServiceDefinition with Sitebricks or Jaxrs annotation invoking the extendedWith:
 
-
+```java
     @Override
     protected Injector getInjector() {
         return Guice.createInjector(new RestSimpleSitebricksModule() {
@@ -245,11 +245,11 @@ Currently RestSimple supports Sitebricks and JAX-RS. It is possible to extend a 
             return Reply.with(pet).as(Json.class);
         }
     }
-
+```
 Using RestSimple with existing JAXRS or Sitebricks Resource
 ============================================================
 Existing JAXRS or Sitebricks resource can be used as it with RestSimple. All you need to do is to tell RestSimple the package name of your resource. As simple as:
-
+```java
     public class NativeJaxrsConfig extends GuiceServletContextListener {
 
         @Override
@@ -268,7 +268,7 @@ Existing JAXRS or Sitebricks resource can be used as it with RestSimple. All you
             }
         }
     }
-
+```
 
 
 
@@ -276,7 +276,7 @@ Deploying your RestSimple application
 =====================================
 
 There is many ways to deploy a ServiceDefinition. First, you need to decide which framework you want to deploy to. Currently, RestSimple supports JAX-RS and Sitebricks. Deploying a ServiceDefinition is as simple as:
-
+```java
     public class PetstoreJaxrsConfig extends GuiceServletContextListener {
 
         @Override
@@ -304,11 +304,11 @@ There is many ways to deploy a ServiceDefinition. First, you need to decide whic
             });
         }
     }
-
+```
 All you need to do is to extends the appropriate Guice Module: RestSimpleJaxrsModule or RestSimpleSitebricksModule. The abstract method defineServices is where you define one or many ServiceDefinition. That's it: the framework will take care of deploying your ServiceDefinition.
 
 You can also let scan for classes annotated with the @Service annotation that contains a method returning a ServiceDefinition like:
-
+```java
     @Service
     public class Foo {
 
@@ -328,9 +328,9 @@ You can also let scan for classes annotated with the @Service annotation that co
            return serviceDefinition
        }
     }
-
+```
 and then just do:
-
+```java
      public class ScanServiceDefinition extends GuiceServletContextListener {
 
         @Override
@@ -340,9 +340,9 @@ and then just do:
             return Guice.createInjector(module);
         }
     }
-
+```
 You can also add ServiceDefinition classes or instance directly by doing:
-
+```java
      public class ManuallyServiceDefinition extends GuiceServletContextListener {
 
         @Override
@@ -355,7 +355,7 @@ You can also add ServiceDefinition classes or instance directly by doing:
             return Guice.createInjector(module);
         }
     }
-
+```
 
 Building the client side of a RestSimple application.
 =====================================================
@@ -368,7 +368,7 @@ There is several ways to define your RestSimple application:
 Using AHC library
 
 Once a RestSimple application is deployed, you can simply use the AsyncHttpClient library (AHC) by doing:
-
+```java
     AsyncHttpClient c = new AsyncHttpClient();
     Response r = c.preparePost(targetUrl + "/addPet/myPet")
                   .setBody("{\"name\":\"pouetpouet\"}")
@@ -376,21 +376,21 @@ Once a RestSimple application is deployed, you can simply use the AsyncHttpClien
                   .addHeader("Accept", "application/json").execute()
                   .get();
     Pet pet = new Pet(response.getResponseBodyAsString());
-
+```
 Using the Web class
 
 You can also use the RestSimple's Web class to invoke your ServiceDefinition
-
+```java
     Web web = new Web(serviceDefinition);
     Pet pet = web.clientOf(targetUrl + "/addPet/myPet")
                  .post(new Pet("pouetpouet"), Pet.class);
-
+```
 The Web class is constructed and can derive some information from a ServiceDefinition instance, which includes the content-type and accept headers.
 
 Using the WebProxy class
 
 Finally, you can also generate a client implementation using the WebProxy class. First you need to define an interface and annotate methods using the RestSimple annotation set.
-
+```java
     public static interface PetClient {
 
         @Get
@@ -409,17 +409,17 @@ Finally, you can also generate a client implementation using the WebProxy class.
         public Pet delete(@PathParam("myPet") String path);
 
     }
-
+```
 Then you can generate the client the implementation by simply doing:
-
+```java
     PetClient client = WebProxy.createProxy(PetClient.class, URI.create(targetUrl));
     Pet pet = client.post(new Pet("pouetpouet"), "myPet");
-
+```
 Generating ServiceDefinition HTML description
 =============================================
 
   It is possible to generate an HTML view of a ServiceDefinition. All you need to do is
-
+```java
         ServiceDefinition serviceDefinition = new DefaultServiceDefinition();
         serviceDefinition
                 .withHandler(new PutServiceHandler("/createAddressBook/:ad", action))
@@ -428,9 +428,9 @@ Generating ServiceDefinition HTML description
                 .withHandler(new DeleteServiceHandler("/deleteAddressBook/:ad", action));
 
         HtmlTemplateGenerator generator = new HtmlTemplateGenerator(new VelocityTemplater());
-
+```
 The Html page will looks like:
-
+```html
         <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
                 "http://www.w3.org/TR/html4/loose.dtd">
         <html>
@@ -558,3 +558,4 @@ The Html page will looks like:
             </div>
             </body>
         </html>
+```
